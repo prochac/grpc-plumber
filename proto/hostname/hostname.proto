@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+// buf:lint:ignore PACKAGE_DIRECTORY_MATCH
+package hostname;
+
+service HostnameService {
+  rpc GetHostname (GetHostnameRequest) returns (GetHostnameResponse) {}
+}
+
+message GetHostnameRequest {
+}
+
+message GetHostnameResponse {
+  string hostname = 1;
+}
