@@ -7,9 +7,10 @@ import (
 	"os"
 	"time"
 
-	pb "github.com/prochac/grpc-plumber/gen/proto/go/grpc_plumber/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	pb "github.com/prochac/grpc-plumber/gen/proto/go/grpc_plumber/v1"
 )
 
 func main() {
