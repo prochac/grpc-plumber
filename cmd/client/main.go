@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	pb "github.com/prochac/grpc-lb-test/gen/proto/go/hostname"
+	pb "github.com/prochac/grpc-plumber/gen/proto/go/grpc_plumber/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -17,7 +17,7 @@ func main() {
 	if !ok {
 		log.Fatalln("SERVER_ADDR env var is required")
 	}
-	conn, err := grpc.Dial(serverAddr,
+	conn, err := grpc.NewClient(serverAddr,
 		grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
 			InsecureSkipVerify: true,
 		})),
@@ -26,7 +26,7 @@ func main() {
 		log.Fatalf("failed to dial server: %v", err)
 	}
 	defer conn.Close()
-	client := pb.NewHostnameServiceClient(conn)
+	client := pb.NewPlumberServiceClient(conn)
 
 	for {
 		resp, err := client.GetHostname(context.Background(), &pb.GetHostnameRequest{})
