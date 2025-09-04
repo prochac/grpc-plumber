@@ -15,8 +15,6 @@ RUN apt update && apt install -y \
     && rm -rf /var/lib/apt/lists/* \
     && update-ca-certificates
 
-COPY --from=builder /app/build/server /app/build/server
+COPY --from=builder /app/build/* /usr/local/bin/
 
-WORKDIR /app
-
-CMD ["./server"]
+CMD ["/usr/local/bin/server"]
