@@ -1,12 +1,15 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
 	"os"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/examples/data"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
@@ -20,14 +23,24 @@ func main() {
 	if !ok {
 		log.Fatal("GRPC_PORT env var is required")
 	}
+
+	var opts []grpc.ServerOption
+	if os.Getenv("USE_TLS") == "1" {
+		cert, err := tls.LoadX509KeyPair(data.Path("x509/server_cert.pem"), data.Path("x509/server_key.pem"))
+		if err != nil {
+			log.Fatalf("failed to load key pair: %s", err)
+		}
+		opts = append(opts, grpc.Creds(credentials.NewServerTLSFromCert(&cert)))
+	}
+	s := grpc.NewServer(opts...)
+	reflection.Register(s)
+	grpc_health_v1.RegisterHealthServer(s, health.NewServer())
+	pb.RegisterPlumberServiceServer(s, &plumberv1.DebugServiceImplementation{})
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer()
-	reflection.Register(s)
-	grpc_health_v1.RegisterHealthServer(s, health.NewServer())
-	pb.RegisterPlumberServiceServer(s, &plumberv1.DebugServiceImplementation{})
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)

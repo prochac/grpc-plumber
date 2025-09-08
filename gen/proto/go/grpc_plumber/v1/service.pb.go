@@ -403,7 +403,7 @@ const file_grpc_plumber_v1_service_proto_rawDesc = "" +
 	"\tSlowUnary\x12!.grpc_plumber.v1.SlowUnaryRequest\x1a\".grpc_plumber.v1.SlowUnaryResponse\x12i\n" +
 	"\x10SlowServerStream\x12(.grpc_plumber.v1.SlowServerStreamRequest\x1a).grpc_plumber.v1.SlowServerStreamResponse0\x01\x12i\n" +
 	"\x10SlowClientStream\x12(.grpc_plumber.v1.SlowClientStreamRequest\x1a).grpc_plumber.v1.SlowClientStreamResponse(\x01B\xc9\x01\n" +
-	"\x13com.grpc_plumber.v1B\fServiceProtoP\x01ZKgithub.com/prochac/grpc-lb-test/gen/proto/go/grpc_plumber/v1;grpc_plumberv1\xa2\x02\x03GXX\xaa\x02\x0eGrpcPlumber.V1\xca\x02\x0eGrpcPlumber\\V1\xe2\x02\x1aGrpcPlumber\\V1\\GPBMetadata\xea\x02\x0fGrpcPlumber::V1b\x06proto3"
+	"\x13com.grpc_plumber.v1B\fServiceProtoP\x01ZKgithub.com/prochac/grpc-plumber/gen/proto/go/grpc_plumber/v1;grpc_plumberv1\xa2\x02\x03GXX\xaa\x02\x0eGrpcPlumber.V1\xca\x02\x0eGrpcPlumber\\V1\xe2\x02\x1aGrpcPlumber\\V1\\GPBMetadata\xea\x02\x0fGrpcPlumber::V1b\x06proto3"
 
 var (
 	file_grpc_plumber_v1_service_proto_rawDescOnce sync.Once

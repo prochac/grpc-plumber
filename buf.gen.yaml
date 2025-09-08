@@ -6,7 +6,7 @@ managed:
       module: buf.build/googleapis/googleapis
   override:
     - file_option: go_package_prefix
-      value: github.com/prochac/grpc-lb-test/gen/proto/go
+      value: github.com/prochac/grpc-plumber/gen/proto/go
 plugins:
   - remote: buf.build/protocolbuffers/go
     out: gen/proto/go
