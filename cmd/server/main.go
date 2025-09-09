@@ -35,7 +35,8 @@ func main() {
 	s := grpc.NewServer(opts...)
 	reflection.Register(s)
 	grpc_health_v1.RegisterHealthServer(s, health.NewServer())
-	pb.RegisterPlumberServiceServer(s, &plumberv1.DebugServiceImplementation{})
+	pb.RegisterTimeoutServiceServer(s, &plumberv1.TimeoutServiceServer{})
+	pb.RegisterLoadBalancingServiceServer(s, &plumberv1.LoadBalancingServiceServer{})
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 	if err != nil {

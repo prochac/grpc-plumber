@@ -14,8 +14,12 @@ Use the OCI image `ghcr.io/prochac/grpc-plumber:latest` to run the gRPC server.
 
 ### Purpose
 
-To test server-side timout settings. The `grpc_plumber.v1.PlumberService`
+To test server-side timout settings. The `grpc_plumber.v1.TimeoutService`
 provides methods that can delay responses.
+
+To test load-balancing or session stickiness, the
+`grpc_plumber.v1.LoadBalancerService` provides methods that return the server's
+hostname.
 
 ## gRPC Client
 
@@ -28,6 +32,8 @@ just `client` should work too.
 - SERVER_ADDR - gRPC server address (mandatory, no default)
 - ACCESS_TOKEN - access token to send in the `authorization` metadata (optional).  
   If set, the server is expected to use TLS.
+- SESSION_HEADER - name of the metadata header to use for session stickiness (optional).  
+  If set, the client will send a random value in this header with each request.
 
 ### Purpose
 

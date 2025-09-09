@@ -1,0 +1,31 @@
+syntax = "proto3";
+package grpc_plumber.v1;
+
+// LoadBalancingService provides methods to test load balancing behavior, or
+// sticky sessions, by returning the server's hostname and allowing setting and
+// getting key-value pairs in memory.
+service LoadBalancingService {
+  // GetHostname returns the server's hostname.
+  rpc GetHostname(GetHostnameRequest) returns (GetHostnameResponse);
+  // SetKey sets a key-value pair in the server's memory.
+  rpc SetKey(SetKeyRequest) returns (SetKeyResponse);
+  // GetKey retrieves the value for a given key.
+  rpc GetKey(GetKeyRequest) returns (GetKeyResponse);
+}
+message GetHostnameRequest {}
+message GetHostnameResponse {
+  string hostname = 1;
+}
+
+message GetKeyRequest {
+  string key = 1;
+}
+message GetKeyResponse {
+  string value = 1;
+}
+
+message SetKeyRequest {
+  string key = 1;
+  string value = 2;
+}
+message SetKeyResponse {}

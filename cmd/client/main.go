@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"log"
+	"math/rand/v2"
 	"os"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
+	"google.golang.org/grpc/metadata"
 )
 
 func main() {
@@ -35,21 +38,87 @@ func main() {
 		}
 		opts = append(opts, grpc.WithPerRPCCredentials(perRPC))
 	}
+	if err := getHostnames(ctx, serverAddr, opts...); err != nil {
+		log.Fatalf("failed to get hostnames: %v", err)
+	}
+	if sessionHeader := os.Getenv("SESSION_HEADER"); sessionHeader != "" {
+		if err := testStickySession(ctx, sessionHeader, serverAddr, opts...); err != nil {
+			log.Fatalf("failed to get hostnames: %v", err)
+		}
+	}
+}
 
+func getHostnames(ctx context.Context, serverAddr string, opts ...grpc.DialOption) error {
 	conn, err := grpc.NewClient(serverAddr, opts...)
 	if err != nil {
-		log.Fatalf("failed to dial server: %v", err)
+		return fmt.Errorf("failed to dial server: %w", err)
 	}
 	defer conn.Close()
-	client := pb.NewPlumberServiceClient(conn)
+	client := pb.NewLoadBalancingServiceClient(conn)
 
-	for {
+	// Test the load balancing by making multiple requests and printing the hostname of the server handling each request.
+	for range 10 {
 		resp, err := client.GetHostname(ctx, &pb.GetHostnameRequest{})
 		if err != nil {
-			log.Printf("failed to get hostname: %v", err)
-		} else {
-			log.Printf("hostname: %s", resp.Hostname)
+			return fmt.Errorf("failed to get hostname: %w", err)
 		}
-		time.Sleep(1 * time.Second)
+		log.Printf("hostname: %s", resp.Hostname)
+		time.Sleep(20 * time.Millisecond)
 	}
+	return nil
+}
+
+func testStickySession(ctx context.Context, sessionHeader string, serverAddr string, opts ...grpc.DialOption) error {
+	readConn, err := grpc.NewClient(serverAddr, opts...)
+	if err != nil {
+		return fmt.Errorf("failed to dial server: %w", err)
+	}
+	defer readConn.Close()
+	readClient := pb.NewLoadBalancingServiceClient(readConn)
+
+	writeConn, err := grpc.NewClient(serverAddr, opts...)
+	if err != nil {
+		return fmt.Errorf("failed to dial server: %w", err)
+	}
+	defer writeConn.Close()
+	writeClient := pb.NewLoadBalancingServiceClient(writeConn)
+
+	for range 10 {
+		sessionID := randomString(32)
+		randKey := randomString(32)
+		randValue := randomString(32)
+		ctxWithSession := metadata.AppendToOutgoingContext(ctx, sessionHeader, sessionID)
+		// Write a value
+		_, err := writeClient.SetKey(ctxWithSession, &pb.SetKeyRequest{
+			Key:   randKey,
+			Value: randValue,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to set key: %w", err)
+		}
+		// Read the value back
+		resp, err := readClient.GetKey(ctxWithSession, &pb.GetKeyRequest{
+			Key: randKey,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get key: %w", err)
+		}
+		if resp.Value != randValue {
+			log.Printf("Sticky session failed: expected %q, got %q", randValue, resp.Value)
+		}
+		log.Printf("Sticky session succeeded: key %q has value %q", randKey, resp.Value)
+		time.Sleep(20 * time.Millisecond)
+	}
+	return nil
+}
+
+func randomString(n int) string {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	b := make([]byte, n)
+	for i := range b {
+		// use math/rand for simplicity, crypto/rand is overkill here, and definitery don't use  time-based random.
+		// TIME packege is FORBIDDEN in this codebase.
+		b[i] = letters[rand.IntN(len(letters))]
+	}
+	return string(b)
 }

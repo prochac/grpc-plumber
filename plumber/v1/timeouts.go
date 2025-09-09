@@ -7,19 +7,20 @@ import (
 	"os"
 	"time"
 
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	pb "github.com/prochac/grpc-plumber/gen/proto/go/grpc_plumber/v1"
 )
 
-type DebugServiceImplementation struct {
-	pb.UnimplementedPlumberServiceServer
+type TimeoutServiceServer struct {
+	pb.UnimplementedTimeoutServiceServer
 }
 
-var _ pb.PlumberServiceServer = (*DebugServiceImplementation)(nil)
+var _ pb.TimeoutServiceServer = (*TimeoutServiceServer)(nil)
 
-func (d DebugServiceImplementation) GetHostname(context.Context, *pb.GetHostnameRequest) (*pb.GetHostnameResponse, error) {
+func (d *TimeoutServiceServer) GetHostname(context.Context, *pb.GetHostnameRequest) (*pb.GetHostnameResponse, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
@@ -27,7 +28,7 @@ func (d DebugServiceImplementation) GetHostname(context.Context, *pb.GetHostname
 	return &pb.GetHostnameResponse{Hostname: hostname}, nil
 }
 
-func (d DebugServiceImplementation) SlowUnary(ctx context.Context, req *pb.SlowUnaryRequest) (*pb.SlowUnaryResponse, error) {
+func (d *TimeoutServiceServer) SlowUnary(ctx context.Context, req *pb.SlowUnaryRequest) (*pb.SlowUnaryResponse, error) {
 	if req.GetSleepTime() == nil {
 		return &pb.SlowUnaryResponse{}, nil
 	}
@@ -37,7 +38,7 @@ func (d DebugServiceImplementation) SlowUnary(ctx context.Context, req *pb.SlowU
 	return &pb.SlowUnaryResponse{}, nil
 }
 
-func (d DebugServiceImplementation) SlowServerStream(req *pb.SlowServerStreamRequest, stream grpc.ServerStreamingServer[pb.SlowServerStreamResponse]) error {
+func (d *TimeoutServiceServer) SlowServerStream(req *pb.SlowServerStreamRequest, stream grpc.ServerStreamingServer[pb.SlowServerStreamResponse]) error {
 	ctx := stream.Context()
 	sleepTime := getSleepTime(req)
 	for i := int32(0); i < req.GetMessageCount(); i++ {
@@ -51,7 +52,7 @@ func (d DebugServiceImplementation) SlowServerStream(req *pb.SlowServerStreamReq
 	return nil
 }
 
-func (d DebugServiceImplementation) SlowClientStream(stream grpc.ClientStreamingServer[pb.SlowClientStreamRequest, pb.SlowClientStreamResponse]) error {
+func (d *TimeoutServiceServer) SlowClientStream(stream grpc.ClientStreamingServer[pb.SlowClientStreamRequest, pb.SlowClientStreamResponse]) error {
 	ctx := stream.Context()
 	var count int32
 	for {
@@ -67,6 +68,31 @@ func (d DebugServiceImplementation) SlowClientStream(stream grpc.ClientStreaming
 			return err
 		}
 	}
+}
+
+func (d *TimeoutServiceServer) SlowBiDirectionStream(stream grpc.BidiStreamingServer[pb.SlowBiDirectionStreamRequest, pb.SlowBiDirectionStreamResponse]) error {
+	errG, ctx := errgroup.WithContext(stream.Context())
+	for {
+		msg, err := stream.Recv()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		errG.Go(func() error {
+			for range msg.GetMessageCount() {
+				if err := nonBlockingSleep(ctx, getSleepTime(msg)); err != nil {
+					return err
+				}
+				if err := stream.Send(&pb.SlowBiDirectionStreamResponse{MessageIndex: msg.GetMessageIndex()}); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	}
+	return errG.Wait()
 }
 
 func getSleepTime(msg interface{ GetSleepTime() *durationpb.Duration }) time.Duration {

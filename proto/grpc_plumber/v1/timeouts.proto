@@ -3,16 +3,11 @@ package grpc_plumber.v1;
 
 import "google/protobuf/duration.proto";
 
-service PlumberService {
-  rpc GetHostname(GetHostnameRequest) returns (GetHostnameResponse);
+service TimeoutService {
   rpc SlowUnary(SlowUnaryRequest) returns (SlowUnaryResponse);
   rpc SlowServerStream(SlowServerStreamRequest) returns (stream SlowServerStreamResponse);
   rpc SlowClientStream(stream SlowClientStreamRequest) returns (SlowClientStreamResponse);
-}
-
-message GetHostnameRequest {}
-message GetHostnameResponse {
-  string hostname = 1;
+  rpc SlowBiDirectionStream(stream SlowBiDirectionStreamRequest) returns (stream SlowBiDirectionStreamResponse);
 }
 
 message SlowUnaryRequest {
@@ -34,4 +29,16 @@ message SlowClientStreamRequest {
 }
 message SlowClientStreamResponse {
   int32 message_count = 1;
+}
+
+// SlowBiDirectionStreamRequest requests a number of messages to be sent back
+// to the client, each after a specified sleep time. The server will respond
+// with the same message index.
+message SlowBiDirectionStreamRequest {
+  int32 message_index = 1;
+  int32 message_count = 2;
+  google.protobuf.Duration sleep_time = 3;
+}
+message SlowBiDirectionStreamResponse {
+  int32 message_index = 1;
 }
