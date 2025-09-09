@@ -116,8 +116,6 @@ func randomString(n int) string {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	b := make([]byte, n)
 	for i := range b {
-		// use math/rand for simplicity, crypto/rand is overkill here, and definitery don't use  time-based random.
-		// TIME packege is FORBIDDEN in this codebase.
 		b[i] = letters[rand.IntN(len(letters))]
 	}
 	return string(b)
