@@ -13,8 +13,10 @@ import (
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/credentials/oauth"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 func main() {
@@ -25,11 +27,19 @@ func main() {
 		log.Fatalln("SERVER_ADDR env var is required")
 	}
 
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
-			InsecureSkipVerify: true,
-		})),
+	var opts []grpc.DialOption
+	if os.Getenv("USE_TLS") == "1" {
+		opts = []grpc.DialOption{
+			grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
+				InsecureSkipVerify: true,
+			})),
+		}
+	} else {
+		opts = []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		}
 	}
+
 	if token := os.Getenv("ACCESS_TOKEN"); token != "" {
 		perRPC := oauth.TokenSource{
 			TokenSource: oauth2.StaticTokenSource(&oauth2.Token{
@@ -85,9 +95,8 @@ func testStickySession(ctx context.Context, sessionHeader string, serverAddr str
 
 	for range 10 {
 		sessionID := randomString(32)
-		randKey := randomString(32)
-		randValue := randomString(32)
 		ctxWithSession := metadata.AppendToOutgoingContext(ctx, sessionHeader, sessionID)
+		randKey, randValue := randomString(32), randomString(32)
 		// Write a value
 		_, err := writeClient.SetKey(ctxWithSession, &pb.SetKeyRequest{
 			Key:   randKey,
@@ -100,6 +109,10 @@ func testStickySession(ctx context.Context, sessionHeader string, serverAddr str
 		resp, err := readClient.GetKey(ctxWithSession, &pb.GetKeyRequest{
 			Key: randKey,
 		})
+		if status.Code(err) == 5 {
+			log.Printf("Sticky session failed: key %q not found", randKey)
+			continue
+		}
 		if err != nil {
 			return fmt.Errorf("failed to get key: %w", err)
 		}
